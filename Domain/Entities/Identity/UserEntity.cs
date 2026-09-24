@@ -13,4 +13,6 @@ public class UserEntity : IdentityUser<long>, IBaseEntity
 
     public bool IsDeleted { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public virtual ICollection<UserRoleEntity>? UserRoles { get; set; }
 }

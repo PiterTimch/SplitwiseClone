@@ -1,4 +1,6 @@
 
+using Microsoft.EntityFrameworkCore;
+
 namespace SplitwiseClone
 {
     public class Program
@@ -6,6 +8,9 @@ namespace SplitwiseClone
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(connectionString));
 
             builder.Services.AddControllers();
             builder.Services.AddOpenApi();
