@@ -1,13 +1,16 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using SplitwiseClone.Domain.Entities.Additional;
+using System.ComponentModel.DataAnnotations;
 
 namespace SplitwiseClone.Domain.Entities.Identity;
 
-public class UserEntity : IdentityUser<long>
+public class UserEntity : IdentityUser<long>, IBaseEntity
 {
-    public string? FirstName { get; set; } = null;
-    public string? LastName { get; set; } = null;
+    [StringLength(100)]
+    public string? FirstName { get; set; }
+    [StringLength(100)]
+    public string? LastName { get; set; }
 
-    public DateTime DateCreated { get; set; } = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
     public bool IsDeleted { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

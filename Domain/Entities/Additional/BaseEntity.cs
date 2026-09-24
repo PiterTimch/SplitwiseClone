@@ -2,11 +2,17 @@
 
 namespace SplitwiseClone.Domain.Entities.Additional;
 
-public class BaseEntity<Tid>
+public interface IBaseEntity
+{
+    DateTime CreatedAt { get; set; }
+    bool IsDeleted { get; set; }
+}
+
+public abstract class BaseUniqueEntity<Tid> : IBaseEntity
 {
     [Key]
-    public Tid Id { get; set; }
+    public Tid Id { get; set; } = default!;
 
-    public DateTime CreatedAt { get; set; } = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public bool IsDeleted { get; set; }
 }
