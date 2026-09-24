@@ -1,5 +1,6 @@
 
 using Microsoft.EntityFrameworkCore;
+using SplitwiseClone.Domain;
 
 namespace SplitwiseClone
 {
@@ -9,8 +10,14 @@ namespace SplitwiseClone
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            string connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+            }
             builder.Services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(connectionString));
+                options.UseNpgsql(connectionString));
 
             builder.Services.AddControllers();
             builder.Services.AddOpenApi();
