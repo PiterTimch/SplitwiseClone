@@ -2,9 +2,11 @@
 using SplitwiseClone.Domain.Entities.Group;
 using SplitwiseClone.Domain.Entities.Identity;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SplitwiseClone.Domain.Entities.Expense;
 
+[Table("tbl_expenses")]
 public class ExpenseEntity : BaseUniqueEntity<long>
 {
     [StringLength(200)]
