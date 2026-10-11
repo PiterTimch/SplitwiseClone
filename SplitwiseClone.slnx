@@ -1,3 +1,5 @@
 <Solution>
-  <Project Path="SplitwiseClone.csproj" />
+  <Project Path="Api/SplitwiseClone.Api.csproj" />
+  <Project Path="Domain/SplitwiseClone.Domain.csproj" />
+  <Project Path="Infrastructure/SplitwiseClone.Infrastructure.csproj" />
 </Solution>
