@@ -1,36 +1,34 @@
 namespace SplitwiseClone.Infrastructure.Repositories.Implementations;
 
+using SplitwiseClone.Application.Interfaces.Repositories;
 using SplitwiseClone.Infrastructure.Data;
-using SplitwiseClone.Infrastructure.Repositories.Interfaces;
 
-public class UnitOfWork : IUnitOfWork
+public sealed class UnitOfWork : IUnitOfWork
 {
     private readonly SplitwiseDbContext _context;
-    private IUserRepository? _users;
-    private IGroupRepository? _groups;
-    private IGroupMemberRepository? _groupMembers;
-    private IExpenseRepository? _expenses;
-    private IExpenseSplitRepository? _expenseSplits;
 
-    public UnitOfWork(SplitwiseDbContext context)
+    public UnitOfWork(
+        SplitwiseDbContext context,
+        IUserRepository users,
+        IGroupRepository groups,
+        IGroupMemberRepository groupMembers,
+        IExpenseRepository expenses,
+        IExpenseSplitRepository expenseSplits)
     {
         _context = context;
+        Users = users;
+        Groups = groups;
+        GroupMembers = groupMembers;
+        Expenses = expenses;
+        ExpenseSplits = expenseSplits;
     }
 
-    public IUserRepository Users => _users ??= new UserRepository(_context);
-    public IGroupRepository Groups => _groups ??= new GroupRepository(_context);
-    public IGroupMemberRepository GroupMembers => _groupMembers ??= new GroupMemberRepository(_context);
-    public IExpenseRepository Expenses => _expenses ??= new ExpenseRepository(_context);
-    public IExpenseSplitRepository ExpenseSplits => _expenseSplits ??= new ExpenseSplitRepository(_context);
+    public IUserRepository Users { get; }
+    public IGroupRepository Groups { get; }
+    public IGroupMemberRepository GroupMembers { get; }
+    public IExpenseRepository Expenses { get; }
+    public IExpenseSplitRepository ExpenseSplits { get; }
 
-    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        return await _context.SaveChangesAsync(cancellationToken);
-    }
-
-    public void Dispose()
-    {
-        _context.Dispose();
-        GC.SuppressFinalize(this);
-    }
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
+        _context.SaveChangesAsync(cancellationToken);
 }

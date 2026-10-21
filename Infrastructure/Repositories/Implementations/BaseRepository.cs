@@ -3,7 +3,7 @@ namespace SplitwiseClone.Infrastructure.Repositories.Implementations;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using SplitwiseClone.Infrastructure.Data;
-using SplitwiseClone.Infrastructure.Repositories.Interfaces;
+using SplitwiseClone.Application.Interfaces.Repositories;
 
 public abstract class BaseRepository<TEntity> : IBaseRepository<TEntity> where TEntity : class
 {

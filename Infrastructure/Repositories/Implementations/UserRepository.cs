@@ -3,7 +3,7 @@ namespace SplitwiseClone.Infrastructure.Repositories.Implementations;
 using Microsoft.EntityFrameworkCore;
 using SplitwiseClone.Domain.Entities;
 using SplitwiseClone.Infrastructure.Data;
-using SplitwiseClone.Infrastructure.Repositories.Interfaces;
+using SplitwiseClone.Application.Interfaces.Repositories;
 
 public class UserRepository : BaseRepository<User>, IUserRepository
 {
