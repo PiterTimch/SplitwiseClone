@@ -1,4 +1,4 @@
-namespace SplitwiseClone.Api.DTOs;
+namespace SplitwiseClone.Application.DTOs.Groups;
 
 public record CreateGroupDto(string Name);
 

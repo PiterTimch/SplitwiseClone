@@ -1,6 +1,4 @@
-namespace SplitwiseClone.Api.DTOs;
-
-public record CreateUserDto(string Name, string Email);
+namespace SplitwiseClone.Application.DTOs.Users;
 
 public record UpdateUserDto(string Name, string Email);
 

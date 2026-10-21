@@ -1,15 +1,17 @@
 namespace SplitwiseClone.Infrastructure.Data;
 
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SplitwiseClone.Domain.Entities;
 
-public class SplitwiseDbContext : DbContext
+public class SplitwiseDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
 {
     public SplitwiseDbContext(DbContextOptions<SplitwiseDbContext> options) : base(options)
     {
     }
 
-    public DbSet<User> Users => Set<User>();
+    public new DbSet<User> Users => Set<User>();
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
     public DbSet<Expense> Expenses => Set<Expense>();
@@ -18,6 +20,15 @@ public class SplitwiseDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Rename Identity tables to avoid conflicts
+        modelBuilder.Entity<ApplicationUser>().ToTable("AspNetUsers");
+        modelBuilder.Entity<IdentityRole<Guid>>().ToTable("AspNetRoles");
+        modelBuilder.Entity<IdentityUserRole<Guid>>().ToTable("AspNetUserRoles");
+        modelBuilder.Entity<IdentityUserClaim<Guid>>().ToTable("AspNetUserClaims");
+        modelBuilder.Entity<IdentityUserLogin<Guid>>().ToTable("AspNetUserLogins");
+        modelBuilder.Entity<IdentityRoleClaim<Guid>>().ToTable("AspNetRoleClaims");
+        modelBuilder.Entity<IdentityUserToken<Guid>>().ToTable("AspNetUserTokens");
 
         modelBuilder.Entity<User>(builder =>
         {

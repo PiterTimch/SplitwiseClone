@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Domain\SplitwiseClone.Domain.csproj" />
     <ProjectReference Include="..\Infrastructure\SplitwiseClone.Infrastructure.csproj" />
+    <ProjectReference Include="..\Application\SplitwiseClone.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

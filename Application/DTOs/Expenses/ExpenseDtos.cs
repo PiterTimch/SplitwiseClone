@@ -1,4 +1,4 @@
-namespace SplitwiseClone.Api.DTOs;
+namespace SplitwiseClone.Application.DTOs.Expenses;
 
 public record CreateExpenseSplitDto(Guid UserId, double PaidAmount, double OwedAmount);
 
@@ -7,7 +7,6 @@ public record CreateExpenseDto(
     double TotalAmount,
     DateTime? Date,
     int? GroupId,
-    Guid CreatedByUserId,
     bool IsPayment,
     List<CreateExpenseSplitDto>? Splits);
 
