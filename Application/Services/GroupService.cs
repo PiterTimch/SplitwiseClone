@@ -71,7 +71,7 @@ public class GroupService : IGroupService
         var group = await _unitOfWork.Groups.GetByIdAsync(id, cancellationToken);
         if (group is null)
         {
-            throw new NotFoundException("Group", id);
+            throw new EntityNotFoundException("Group", id);
         }
 
         group.Name = dto.Name;
@@ -84,7 +84,7 @@ public class GroupService : IGroupService
         var group = await _unitOfWork.Groups.GetByIdAsync(id, cancellationToken);
         if (group is null)
         {
-            throw new NotFoundException("Group", id);
+            throw new EntityNotFoundException("Group", id);
         }
 
         _unitOfWork.Groups.Delete(group);
@@ -96,19 +96,19 @@ public class GroupService : IGroupService
         var group = await _unitOfWork.Groups.GetByIdAsync(groupId, cancellationToken);
         if (group is null)
         {
-            throw new NotFoundException("Group", groupId);
+            throw new EntityNotFoundException("Group", groupId);
         }
 
         var user = await _unitOfWork.Users.GetByIdAsync(dto.UserId, cancellationToken);
         if (user is null)
         {
-            throw new NotFoundException("User", dto.UserId);
+            throw new EntityNotFoundException("User", dto.UserId);
         }
 
         var existingMember = await _unitOfWork.GroupMembers.GetAsync(groupId, dto.UserId, cancellationToken);
         if (existingMember is not null)
         {
-            throw new ConflictException("User is already a member of this group.");
+            throw new EntityConflictException("User is already a member of this group.");
         }
 
         var member = new GroupMember
@@ -129,7 +129,7 @@ public class GroupService : IGroupService
         var member = await _unitOfWork.GroupMembers.GetAsync(groupId, userId, cancellationToken);
         if (member is null)
         {
-            throw new NotFoundException("GroupMember", $"{groupId}/{userId}");
+            throw new EntityNotFoundException("GroupMember", $"{groupId}/{userId}");
         }
 
         _unitOfWork.GroupMembers.Delete(member);

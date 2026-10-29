@@ -36,7 +36,7 @@ public class UserService : IUserService
         var user = await _unitOfWork.Users.GetByIdAsync(id, cancellationToken);
         if (user is null)
         {
-            throw new NotFoundException("User", id);
+            throw new EntityNotFoundException("User", id);
         }
 
         user.Name = dto.Name;
@@ -53,7 +53,7 @@ public class UserService : IUserService
         var user = await _unitOfWork.Users.GetByIdAsync(id, cancellationToken);
         if (user is null)
         {
-            throw new NotFoundException("User", id);
+            throw new EntityNotFoundException("User", id);
         }
 
         _unitOfWork.Users.Delete(user);

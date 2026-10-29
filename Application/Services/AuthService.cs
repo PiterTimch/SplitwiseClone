@@ -28,7 +28,7 @@ public class AuthService : IAuthService
         var existingUser = await _userManager.FindByEmailAsync(dto.Email);
         if (existingUser is not null)
         {
-            throw new ConflictException("User with this email already exists.");
+            throw new EntityConflictException("User with this email already exists.");
         }
 
         var userId = Guid.NewGuid();
@@ -45,10 +45,9 @@ public class AuthService : IAuthService
         if (!result.Succeeded)
         {
             var errors = string.Join("; ", result.Errors.Select(e => e.Description));
-            throw new BadRequestException($"Registration failed: {errors}");
+            throw new EntityConflictException($"Registration failed: {errors}");
         }
 
-        // Create mirrored domain User entity (same Guid)
         var domainUser = new User
         {
             Id = userId,
@@ -71,13 +70,13 @@ public class AuthService : IAuthService
         var appUser = await _userManager.FindByEmailAsync(dto.Email);
         if (appUser is null)
         {
-            throw new UnauthorizedException("Invalid email or password.");
+            throw new UserUnauthorizedException("Invalid email or password.");
         }
 
         var isPasswordValid = await _userManager.CheckPasswordAsync(appUser, dto.Password);
         if (!isPasswordValid)
         {
-            throw new UnauthorizedException("Invalid email or password.");
+            throw new UserUnauthorizedException("Invalid email or password.");
         }
 
         var roles = await _userManager.GetRolesAsync(appUser);

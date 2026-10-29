@@ -49,7 +49,7 @@ public class ExpenseService : IExpenseService
         var creator = await _unitOfWork.Users.GetByIdAsync(currentUserId, cancellationToken);
         if (creator is null)
         {
-            throw new BadRequestException("Authenticated user does not have a domain profile.");
+            throw new EntityConflictException("Authenticated user does not have a domain profile.");
         }
 
         if (dto.GroupId.HasValue)
@@ -57,7 +57,7 @@ public class ExpenseService : IExpenseService
             var group = await _unitOfWork.Groups.GetByIdAsync(dto.GroupId.Value, cancellationToken);
             if (group is null)
             {
-                throw new NotFoundException("Group", dto.GroupId.Value);
+                throw new EntityNotFoundException("Group", dto.GroupId.Value);
             }
         }
 
@@ -97,7 +97,7 @@ public class ExpenseService : IExpenseService
         var expense = await _unitOfWork.Expenses.GetByIdAsync(id, cancellationToken);
         if (expense is null)
         {
-            throw new NotFoundException("Expense", id);
+            throw new EntityNotFoundException("Expense", id);
         }
 
         expense.Description = dto.Description;
@@ -114,7 +114,7 @@ public class ExpenseService : IExpenseService
         var expense = await _unitOfWork.Expenses.GetByIdAsync(id, cancellationToken);
         if (expense is null)
         {
-            throw new NotFoundException("Expense", id);
+            throw new EntityNotFoundException("Expense", id);
         }
 
         _unitOfWork.Expenses.Delete(expense);
