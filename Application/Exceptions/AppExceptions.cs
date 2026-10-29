@@ -1,23 +1,18 @@
 namespace SplitwiseClone.Application.Exceptions;
 
-public class NotFoundException : Exception
+using SplitwiseClone.Domain.Exceptions;
+
+public sealed class EntityNotFoundException : NotFoundException
 {
-    public NotFoundException(string message) : base(message) { }
-    public NotFoundException(string entityName, object key)
-        : base($"{entityName} with key '{key}' was not found.") { }
+    public EntityNotFoundException(string entityName, object key) : base(entityName, key) { }
 }
 
-public class ConflictException : Exception
+public sealed class EntityConflictException : ConflictException
 {
-    public ConflictException(string message) : base(message) { }
+    public EntityConflictException(string message) : base(message) { }
 }
 
-public class BadRequestException : Exception
+public sealed class UserUnauthorizedException : Domain.Exceptions.UnauthorizedAccessException
 {
-    public BadRequestException(string message) : base(message) { }
-}
-
-public class UnauthorizedException : Exception
-{
-    public UnauthorizedException(string message) : base(message) { }
+    public UserUnauthorizedException(string message) : base(message) { }
 }
