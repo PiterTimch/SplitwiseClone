@@ -3,4 +3,5 @@
   <Project Path="Application/SplitwiseClone.Application.csproj" />
   <Project Path="Domain/SplitwiseClone.Domain.csproj" />
   <Project Path="Infrastructure/SplitwiseClone.Infrastructure.csproj" />
+  <Project Path="Application.Tests/SplitwiseClone.Application.Tests.csproj" />
 </Solution>
