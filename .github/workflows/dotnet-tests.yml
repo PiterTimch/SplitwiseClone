@@ -1,10 +1,16 @@
-name: .NET tests
+name: Build, test, and deploy
 
 on:
   push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,8 +25,27 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore SplitwiseClone.slnx
 
-      - name: Build
+      - name: Build solution
         run: dotnet build SplitwiseClone.slnx --configuration Release --no-restore
 
       - name: Run tests
         run: dotnet test Application.Tests/SplitwiseClone.Application.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Build Docker image
+        run: docker build --tag splitwiseclone-api:${{ github.sha }} .
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Render deployment
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "Missing GitHub Actions secret: RENDER_DEPLOY_HOOK_URL"
+            exit 1
+          fi
+          curl --fail --silent --show-error --output /dev/null --request POST "$RENDER_DEPLOY_HOOK_URL"
