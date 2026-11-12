@@ -19,6 +19,24 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (!string.IsNullOrWhiteSpace(connectionString) &&
+            Uri.TryCreate(connectionString, UriKind.Absolute, out var databaseUri) &&
+            (databaseUri.Scheme == "postgres" || databaseUri.Scheme == "postgresql"))
+        {
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder
+            {
+                Host = databaseUri.Host,
+                Port = databaseUri.IsDefaultPort ? 5432 : databaseUri.Port,
+                Database = databaseUri.AbsolutePath.Trim('/'),
+                Username = Uri.UnescapeDataString(databaseUri.UserInfo.Split(':', 2)[0]),
+                Password = databaseUri.UserInfo.Contains(':')
+                    ? Uri.UnescapeDataString(databaseUri.UserInfo.Split(':', 2)[1])
+                    : string.Empty,
+                SslMode = Npgsql.SslMode.Require
+            };
+
+            connectionString = builder.ConnectionString;
+        }
 
         services.AddDbContext<SplitwiseDbContext>(options =>
             options.UseNpgsql(connectionString));
