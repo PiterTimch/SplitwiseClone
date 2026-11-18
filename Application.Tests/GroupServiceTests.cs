@@ -46,9 +46,40 @@ public sealed class GroupServiceTests
         var fixture = new Fixture();
         fixture.Groups.Setup(repository => repository.GetByIdWithDetailsAsync(4, default))
             .ReturnsAsync(new Group { Id = 4, Members = [new GroupMember { UserId = 1 }] });
-        fixture.Users.Setup(repository => repository.GetByIdAsync(3, default)).ReturnsAsync(new ApplicationUser { Id = 3 });
+        fixture.Users.Setup(repository => repository.GetByEmailAsync("member@example.com", default)).ReturnsAsync(new ApplicationUser { Id = 3 });
         fixture.Members.Setup(repository => repository.GetAsync(4, 3, default)).ReturnsAsync(new GroupMember());
-        await Assert.ThrowsAsync<EntityConflictException>(() => fixture.Service.AddMemberAsync(4, 1, new AddGroupMemberDto(3)));
+        await Assert.ThrowsAsync<EntityConflictException>(() => fixture.Service.AddMemberAsync(4, 1, new AddGroupMemberDto("member@example.com")));
+        fixture.Unit.Verify(unit => unit.SaveChangesAsync(default), Times.Never);
+    }
+
+    [Fact]
+    public async Task AddMemberAsync_FindsUserByEmail()
+    {
+        var fixture = new Fixture();
+        fixture.Groups.Setup(repository => repository.GetByIdWithDetailsAsync(4, default))
+            .ReturnsAsync(new Group { Id = 4, Members = [new GroupMember { UserId = 1 }] });
+        fixture.Users.Setup(repository => repository.GetByEmailAsync("member@example.com", default))
+            .ReturnsAsync(new ApplicationUser { Id = 3, Email = "member@example.com" });
+        fixture.Members.Setup(repository => repository.AddAsync(It.IsAny<GroupMember>(), default))
+            .Callback<GroupMember, CancellationToken>((member, _) => member.User = new ApplicationUser { Id = 3, Email = "member@example.com" })
+            .Returns(Task.CompletedTask);
+
+        var result = await fixture.Service.AddMemberAsync(4, 1, new AddGroupMemberDto("member@example.com"));
+
+        Assert.Equal(3, result.UserId);
+        fixture.Users.Verify(repository => repository.GetByEmailAsync("member@example.com", default), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddMemberAsync_ThrowsNotFoundForUnknownEmail()
+    {
+        var fixture = new Fixture();
+        fixture.Groups.Setup(repository => repository.GetByIdWithDetailsAsync(4, default))
+            .ReturnsAsync(new Group { Id = 4, Members = [new GroupMember { UserId = 1 }] });
+        fixture.Users.Setup(repository => repository.GetByEmailAsync("missing@example.com", default))
+            .ReturnsAsync((ApplicationUser?)null);
+
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => fixture.Service.AddMemberAsync(4, 1, new AddGroupMemberDto("missing@example.com")));
         fixture.Unit.Verify(unit => unit.SaveChangesAsync(default), Times.Never);
     }
 

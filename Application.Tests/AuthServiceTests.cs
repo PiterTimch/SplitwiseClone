@@ -3,7 +3,6 @@ using Moq;
 using SplitwiseClone.Application.DTOs.Auth;
 using SplitwiseClone.Application.Exceptions;
 using SplitwiseClone.Application.Interfaces;
-using SplitwiseClone.Application.Interfaces.Repositories;
 using SplitwiseClone.Application.Services;
 using SplitwiseClone.Domain.Entities;
 using Xunit;
@@ -12,14 +11,12 @@ namespace SplitwiseClone.Application.Tests;
 
 public class AuthServiceTests
 {
-    private readonly Mock<UserManager<ApplicationUser>> _users;
+    private readonly Mock<IIdentityUserService> _users = new();
     private readonly Mock<IJwtTokenService> _tokens = new();
     private readonly AuthService _service;
 
     public AuthServiceTests()
     {
-        var store = new Mock<IUserStore<ApplicationUser>>();
-        _users = new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
         _service = new AuthService(_users.Object, _tokens.Object);
     }
 
@@ -27,7 +24,8 @@ public class AuthServiceTests
     public async Task RegisterAsync_CreatesIdentityUserAndReturnsToken()
     {
         _users.Setup(x => x.FindByEmailAsync("a@b.com")).ReturnsAsync((ApplicationUser?)null);
-        _users.Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "secret")).ReturnsAsync(IdentityResult.Success);
+        _users.Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "secret"))
+            .ReturnsAsync(new IdentityOperationResult(true, []));
         _users.Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>())).ReturnsAsync(new List<string> { "member" });
         _tokens.Setup(x => x.GenerateToken(It.IsAny<IdentityUser<int>>(), It.IsAny<IList<string>>())).Returns("jwt");
 
@@ -53,7 +51,8 @@ public class AuthServiceTests
     public async Task RegisterAsync_RejectsFailedIdentityCreation()
     {
         _users.Setup(x => x.FindByEmailAsync("a@b.com")).ReturnsAsync((ApplicationUser?)null);
-        _users.Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "secret")).ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "weak password" }));
+        _users.Setup(x => x.CreateAsync(It.IsAny<ApplicationUser>(), "secret"))
+            .ReturnsAsync(new IdentityOperationResult(false, ["weak password"]));
 
         var exception = await Assert.ThrowsAsync<EntityConflictException>(() => _service.RegisterAsync(new("Alex", "Smith", "a@b.com", "secret")));
 

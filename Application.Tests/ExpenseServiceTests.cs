@@ -58,7 +58,8 @@ public sealed class ExpenseServiceTests
         fixture.Groups.Setup(repository => repository.GetByIdWithDetailsAsync(10, default)).ReturnsAsync(fixture.Group);
         fixture.Expenses.Setup(repository => repository.GetByIdWithSplitsAsync(5, default)).ReturnsAsync(expense);
         var request = new UpdateExpenseDto("Changed", 10m, DateTime.UtcNow, false, ExpenseSplitMode.Equal, [new(1, 10m, 0m)]);
-        await Assert.ThrowsAsync<GroupAccessDeniedException>(() => fixture.Service.UpdateAsync(5, 1, request));
+        var exception = await Assert.ThrowsAsync<ExpenseNotOwnedException>(() => fixture.Service.UpdateAsync(5, 1, request));
+        Assert.Contains("Only the expense creator", exception.Message);
         fixture.Unit.Verify(unit => unit.SaveChangesAsync(default), Times.Never);
     }
 
@@ -67,6 +68,7 @@ public sealed class ExpenseServiceTests
         public Mock<IUnitOfWork> Unit { get; } = new();
         public Mock<IExpenseRepository> Expenses { get; } = new();
         public Mock<IGroupRepository> Groups { get; } = new();
+        public Mock<IUserRepository> Users { get; } = new();
         public Group Group { get; } = new() { Id = 10, Name = "Trip" };
         public ExpenseService Service { get; }
 
@@ -74,7 +76,63 @@ public sealed class ExpenseServiceTests
         {
             Unit.SetupGet(unit => unit.Expenses).Returns(Expenses.Object);
             Unit.SetupGet(unit => unit.Groups).Returns(Groups.Object);
+            Unit.SetupGet(unit => unit.Users).Returns(Users.Object);
             Service = new ExpenseService(Unit.Object);
         }
+    }
+
+    [Fact]
+    public async Task CreateAsync_AllowsUngroupedExpenseWithExistingParticipants()
+    {
+        var fixture = new Fixture();
+        fixture.Users.Setup(repository => repository.GetByIdAsync(1, default)).ReturnsAsync(new ApplicationUser { Id = 1 });
+        fixture.Users.Setup(repository => repository.GetByIdAsync(2, default)).ReturnsAsync(new ApplicationUser { Id = 2 });
+        fixture.Expenses.Setup(repository => repository.AddAsync(It.IsAny<Expense>(), default))
+            .Callback<Expense, CancellationToken>((expense, _) => expense.Id = 12)
+            .Returns(Task.CompletedTask);
+        fixture.Expenses.Setup(repository => repository.GetByIdWithDetailsAsync(12, default)).ReturnsAsync((Expense?)null);
+        var request = new CreateExpenseDto("Dinner", 12m, null, null, false, ExpenseSplitMode.Equal,
+            [new(1, 12m, 0m), new(2, 0m, 0m)]);
+
+        var result = await fixture.Service.CreateAsync(1, request);
+
+        Assert.Null(result.GroupId);
+        Assert.Equal(new[] { 6m, 6m }, result.Splits.Select(split => split.OwedShare));
+        fixture.Expenses.Verify(repository => repository.AddAsync(It.Is<Expense>(expense => expense.GroupId == null), default), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RejectsUnknownParticipantForUngroupedExpense()
+    {
+        var fixture = new Fixture();
+        fixture.Users.Setup(repository => repository.GetByIdAsync(2, default)).ReturnsAsync((ApplicationUser?)null);
+        var request = new CreateExpenseDto("Dinner", 12m, null, null, false, ExpenseSplitMode.Equal,
+            [new(2, 12m, 0m)]);
+
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => fixture.Service.CreateAsync(1, request));
+        fixture.Expenses.Verify(repository => repository.AddAsync(It.IsAny<Expense>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_HidesUngroupedExpenseFromNonParticipants()
+    {
+        var fixture = new Fixture();
+        fixture.Expenses.Setup(repository => repository.GetByIdWithDetailsAsync(12, default))
+            .ReturnsAsync(new Expense { Id = 12, CreatedByUserId = 1, Splits = [new ExpenseSplit { UserId = 2 }] });
+
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => fixture.Service.GetByIdAsync(12, 3));
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_AllowsParticipantToReadUngroupedExpense()
+    {
+        var fixture = new Fixture();
+        fixture.Expenses.Setup(repository => repository.GetByIdWithDetailsAsync(12, default))
+            .ReturnsAsync(new Expense { Id = 12, CreatedByUserId = 1, Splits = [new ExpenseSplit { UserId = 2 }] });
+
+        var result = await fixture.Service.GetByIdAsync(12, 2);
+
+        Assert.Equal(12, result.Id);
+        Assert.Null(result.GroupId);
     }
 }
