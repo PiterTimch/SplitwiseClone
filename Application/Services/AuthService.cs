@@ -5,22 +5,18 @@ using SplitwiseClone.Application.DTOs.Auth;
 using SplitwiseClone.Application.Exceptions;
 using SplitwiseClone.Application.Interfaces;
 using SplitwiseClone.Domain.Entities;
-using SplitwiseClone.Application.Interfaces.Repositories;
 
 public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IJwtTokenService _jwtTokenService;
-    private readonly IUnitOfWork _unitOfWork;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
-        IJwtTokenService jwtTokenService,
-        IUnitOfWork unitOfWork)
+        IJwtTokenService jwtTokenService)
     {
         _userManager = userManager;
         _jwtTokenService = jwtTokenService;
-        _unitOfWork = unitOfWork;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto dto, CancellationToken cancellationToken = default)
@@ -28,17 +24,16 @@ public class AuthService : IAuthService
         var existingUser = await _userManager.FindByEmailAsync(dto.Email);
         if (existingUser is not null)
         {
-            throw new EntityConflictException("User with this email already exists.");
+            throw new EntityConflictException("ApplicationUser with this email already exists.");
         }
-
-        var userId = Guid.NewGuid();
 
         var appUser = new ApplicationUser
         {
-            Id = userId,
             UserName = dto.Email,
             Email = dto.Email,
-            DisplayName = dto.Name
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            CreatedAt = DateTime.UtcNow
         };
 
         var result = await _userManager.CreateAsync(appUser, dto.Password);
@@ -48,21 +43,10 @@ public class AuthService : IAuthService
             throw new EntityConflictException($"Registration failed: {errors}");
         }
 
-        var domainUser = new User
-        {
-            Id = userId,
-            Name = dto.Name,
-            Email = dto.Email,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await _unitOfWork.Users.AddAsync(domainUser, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
         var roles = await _userManager.GetRolesAsync(appUser);
         var token = _jwtTokenService.GenerateToken(appUser, roles);
 
-        return new AuthResponseDto(token, appUser.Email!, appUser.DisplayName, appUser.Id);
+        return new AuthResponseDto(token, appUser.Email!, appUser.FullName, appUser.Id);
     }
 
     public async Task<AuthResponseDto> LoginAsync(LoginRequestDto dto, CancellationToken cancellationToken = default)
@@ -82,6 +66,6 @@ public class AuthService : IAuthService
         var roles = await _userManager.GetRolesAsync(appUser);
         var token = _jwtTokenService.GenerateToken(appUser, roles);
 
-        return new AuthResponseDto(token, appUser.Email!, appUser.DisplayName, appUser.Id);
+        return new AuthResponseDto(token, appUser.Email!, appUser.FullName, appUser.Id);
     }
 }
