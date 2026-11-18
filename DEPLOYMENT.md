@@ -7,6 +7,7 @@ The API runs as a Docker web service on Render. PostgreSQL is hosted separately 
 1. Create a PostgreSQL project and database in Neon.
 2. Copy its connection URI, including `sslmode=require` (the application also enforces TLS for PostgreSQL URIs).
 3. Keep this URI private. Set it as Render's `ConnectionStrings__DefaultConnection` environment variable when creating the service from `render.yaml`.
+4. If this database credential has ever been committed, rotate it in Neon before deploying. Removing it from the current config does not remove it from Git history.
 
 The application accepts Neon's `postgresql://` URI directly and converts it to an Npgsql connection string.
 
@@ -35,3 +36,5 @@ docker run --rm -p 8080:8080 \
   -e JwtSettings__SecretKey='a-long-random-secret-of-at-least-32-characters' \
   splitwiseclone-api
 ```
+
+The Docker build excludes `appsettings.Development.json`. Supply database and JWT secrets through environment variables or a secret manager. Do not put real credentials in command history, source files, or image layers.
