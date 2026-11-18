@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using FluentValidation;
 using Microsoft.OpenApi;
 using SplitwiseClone.Application;
@@ -26,6 +27,9 @@ builder.Services.AddValidatorsFromAssemblyContaining<CreateGroupDtoValidator>();
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
+}).AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
 builder.Services.AddEndpointsApiExplorer();
