@@ -4,7 +4,7 @@ public record CreateGroupDto(string Name);
 
 public record UpdateGroupDto(string Name);
 
-public record AddGroupMemberDto(int UserId);
+public record AddGroupMemberDto(string Email);
 
 public record GroupMemberResponseDto(int UserId, string? UserName, string? UserEmail, DateTime JoinedAt);
 

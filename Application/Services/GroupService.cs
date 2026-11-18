@@ -59,14 +59,15 @@ public sealed class GroupService(IUnitOfWork unitOfWork) : IGroupService
     public async Task<GroupMemberResponseDto> AddMemberAsync(int groupId, int currentUserId, AddGroupMemberDto dto, CancellationToken cancellationToken = default)
     {
         await GetGroupAsync(groupId, currentUserId, cancellationToken);
-        var user = await unitOfWork.Users.GetByIdAsync(dto.UserId, cancellationToken)
-            ?? throw new EntityNotFoundException("User", dto.UserId);
-        if (await unitOfWork.GroupMembers.GetAsync(groupId, dto.UserId, cancellationToken) is not null)
+        var email = dto.Email.Trim();
+        var user = await unitOfWork.Users.GetByEmailAsync(email, cancellationToken)
+            ?? throw new EntityNotFoundException("User", email);
+        if (await unitOfWork.GroupMembers.GetAsync(groupId, user.Id, cancellationToken) is not null)
         {
             throw new EntityConflictException("User is already a member of this group.");
         }
 
-        var member = new GroupMember { GroupId = groupId, UserId = dto.UserId, User = user, JoinedAt = DateTime.UtcNow };
+        var member = new GroupMember { GroupId = groupId, UserId = user.Id, User = user, JoinedAt = DateTime.UtcNow };
         await unitOfWork.GroupMembers.AddAsync(member, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return Map(member);

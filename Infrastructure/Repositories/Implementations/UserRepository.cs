@@ -13,7 +13,8 @@ public class UserRepository : BaseRepository<ApplicationUser>, IUserRepository
 
     public async Task<ApplicationUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        return await DbSet.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+        var normalizedEmail = email.Trim().ToUpperInvariant();
+        return await DbSet.FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail, cancellationToken);
     }
 
     public async Task<ApplicationUser?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default)
