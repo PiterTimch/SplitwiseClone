@@ -259,7 +259,7 @@ namespace SplitwiseClone.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int>("GroupId")
+                    b.Property<int?>("GroupId")
                         .HasColumnType("integer");
 
                     b.Property<bool>("IsPayment")
@@ -410,8 +410,7 @@ namespace SplitwiseClone.Infrastructure.Migrations
                     b.HasOne("SplitwiseClone.Domain.Entities.Group", "Group")
                         .WithMany("Expenses")
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedByUser");
 

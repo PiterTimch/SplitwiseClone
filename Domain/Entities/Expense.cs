@@ -8,8 +8,8 @@ public class Expense : IEntity<int>
     public string Description { get; set; } = string.Empty;
     public decimal TotalCost { get; set; }
     public DateTime Date { get; set; } = DateTime.UtcNow;
-    public int GroupId { get; set; }
-    public Group Group { get; set; } = null!;
+    public int? GroupId { get; set; }
+    public Group? Group { get; set; }
     public int CreatedByUserId { get; set; }
     public ApplicationUser? CreatedByUser { get; set; }
     public bool IsPayment { get; set; }

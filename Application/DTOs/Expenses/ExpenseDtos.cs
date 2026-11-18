@@ -14,7 +14,7 @@ public record CreateExpenseDto(
     string Description,
     decimal TotalCost,
     DateTime? Date,
-    int GroupId,
+    int? GroupId,
     bool IsPayment,
     ExpenseSplitMode SplitMode,
     List<CreateExpenseSplitDto>? Splits);
@@ -34,7 +34,7 @@ public record ExpenseResponseDto(
     string Description,
     decimal TotalCost,
     DateTime Date,
-    int GroupId,
+    int? GroupId,
     string? GroupName,
     int CreatedByUserId,
     string? CreatedByUserName,

@@ -32,6 +32,17 @@ public class ExpenseRepository : BaseRepository<Expense>, IExpenseRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<Expense>> GetUngroupedByUserIdAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(expense => expense.CreatedByUser)
+            .Include(expense => expense.Splits)
+                .ThenInclude(split => split.User)
+            .Where(expense => expense.GroupId == null &&
+                (expense.CreatedByUserId == userId || expense.Splits.Any(split => split.UserId == userId)))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<Expense?> GetByIdWithSplitsAsync(int id, CancellationToken cancellationToken = default)
     {
         return await DbSet

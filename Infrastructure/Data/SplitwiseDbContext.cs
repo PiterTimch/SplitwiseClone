@@ -70,7 +70,7 @@ public class SplitwiseDbContext : IdentityDbContext<ApplicationUser, IdentityRol
             builder.HasOne(e => e.Group)
                 .WithMany(g => g.Expenses)
                 .HasForeignKey(e => e.GroupId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.HasOne(e => e.CreatedByUser)
                 .WithMany(u => u.ExpensesCreated)

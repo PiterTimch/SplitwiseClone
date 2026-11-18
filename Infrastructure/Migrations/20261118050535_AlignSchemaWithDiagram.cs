@@ -172,8 +172,7 @@ public partial class AlignSchemaWithDiagram : Migration
             ALTER TABLE "AspNetUserTokens" ADD CONSTRAINT "FK_AspNetUserTokens_Application_User_UserId" FOREIGN KEY ("UserId") REFERENCES "Application_User" ("Id") ON DELETE CASCADE;
             ALTER TABLE "AspNetRoleClaims" ADD CONSTRAINT "FK_AspNetRoleClaims_AspNetRoles_RoleId" FOREIGN KEY ("RoleId") REFERENCES "AspNetRoles" ("Id") ON DELETE CASCADE;
             ALTER TABLE "Group_Member" ADD CONSTRAINT "FK_Group_Member_Group_GroupId" FOREIGN KEY ("GroupId") REFERENCES "Group" ("Id") ON DELETE CASCADE;
-            ALTER TABLE "Expense" ALTER COLUMN "GroupId" SET NOT NULL;
-            ALTER TABLE "Expense" ADD CONSTRAINT "FK_Expense_Group_GroupId" FOREIGN KEY ("GroupId") REFERENCES "Group" ("Id") ON DELETE RESTRICT;
+            ALTER TABLE "Expense" ADD CONSTRAINT "FK_Expense_Group_GroupId" FOREIGN KEY ("GroupId") REFERENCES "Group" ("Id") ON DELETE SET NULL;
             ALTER TABLE "Expense_Split" ADD CONSTRAINT "FK_Expense_Split_Expense_ExpenseId" FOREIGN KEY ("ExpenseId") REFERENCES "Expense" ("Id") ON DELETE CASCADE;
 
             CREATE UNIQUE INDEX "UserNameIndex" ON "Application_User" ("NormalizedUserName");

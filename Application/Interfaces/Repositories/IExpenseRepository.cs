@@ -6,5 +6,6 @@ public interface IExpenseRepository : IBaseRepository<Expense>
 {
     Task<Expense?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default);
     Task<IEnumerable<Expense>> GetByGroupIdAsync(int groupId, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Expense>> GetUngroupedByUserIdAsync(int userId, CancellationToken cancellationToken = default);
     Task<Expense?> GetByIdWithSplitsAsync(int id, CancellationToken cancellationToken = default);
 }

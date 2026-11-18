@@ -12,6 +12,11 @@ public sealed class EntityConflictException : ConflictException
     public EntityConflictException(string message) : base(message) { }
 }
 
+public sealed class ExpenseNotOwnedException : ConflictException
+{
+    public ExpenseNotOwnedException(int expenseId) : base($"Only the expense creator can modify expense {expenseId}.") { }
+}
+
 public sealed class UserUnauthorizedException : Domain.Exceptions.UnauthorizedAccessException
 {
     public UserUnauthorizedException(string message) : base(message) { }

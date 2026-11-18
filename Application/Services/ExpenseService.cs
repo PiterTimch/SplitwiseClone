@@ -16,6 +16,7 @@ public sealed class ExpenseService(IUnitOfWork unitOfWork) : IExpenseService
         {
             expenses.AddRange(await unitOfWork.Expenses.GetByGroupIdAsync(membership.GroupId, cancellationToken));
         }
+        expenses.AddRange(await unitOfWork.Expenses.GetUngroupedByUserIdAsync(currentUserId, cancellationToken));
 
         return expenses.DistinctBy(expense => expense.Id).Select(Map).ToList();
     }
@@ -24,7 +25,15 @@ public sealed class ExpenseService(IUnitOfWork unitOfWork) : IExpenseService
     {
         var expense = await unitOfWork.Expenses.GetByIdWithDetailsAsync(id, cancellationToken)
             ?? throw new EntityNotFoundException("Expense", id);
-        await EnsureMemberAsync(expense.GroupId, currentUserId, cancellationToken);
+        if (expense.GroupId is int groupId)
+        {
+            await EnsureMemberAsync(groupId, currentUserId, cancellationToken);
+        }
+        else
+        {
+            EnsureUngroupedExpenseIsVisible(expense, currentUserId);
+        }
+
         return Map(expense);
     }
 
@@ -37,9 +46,17 @@ public sealed class ExpenseService(IUnitOfWork unitOfWork) : IExpenseService
 
     public async Task<ExpenseResponseDto> CreateAsync(int currentUserId, CreateExpenseDto dto, CancellationToken cancellationToken = default)
     {
-        var groupId = dto.GroupId;
-        var group = await GetGroupAsync(groupId, cancellationToken);
-        EnsureMembersInSplit(group, dto.Splits!, currentUserId);
+        Group? group = null;
+        if (dto.GroupId is int groupId)
+        {
+            group = await GetGroupAsync(groupId, cancellationToken);
+            EnsureMembersInSplit(group, dto.Splits!, currentUserId);
+        }
+        else
+        {
+            await EnsureValidParticipantsAsync(dto.Splits!, cancellationToken);
+        }
+
         var splits = ExpenseSplitCalculator.Calculate(dto.TotalCost, dto.SplitMode, dto.Splits!);
 
         var expense = new Expense
@@ -47,7 +64,7 @@ public sealed class ExpenseService(IUnitOfWork unitOfWork) : IExpenseService
             Description = dto.Description.Trim(),
             TotalCost = dto.TotalCost,
             Date = dto.Date ?? DateTime.UtcNow,
-            GroupId = group.Id,
+            GroupId = group?.Id,
             CreatedByUserId = currentUserId,
             IsPayment = dto.IsPayment,
             CreatedAt = DateTime.UtcNow,
@@ -63,14 +80,30 @@ public sealed class ExpenseService(IUnitOfWork unitOfWork) : IExpenseService
     {
         var expense = await unitOfWork.Expenses.GetByIdWithSplitsAsync(id, cancellationToken)
             ?? throw new EntityNotFoundException("Expense", id);
-        await EnsureMemberAsync(expense.GroupId, currentUserId, cancellationToken);
-        if (expense.CreatedByUserId != currentUserId)
+        if (expense.GroupId is int groupId)
         {
-            throw new GroupAccessDeniedException(currentUserId, expense.GroupId);
+            await EnsureMemberAsync(groupId, currentUserId, cancellationToken);
+        }
+        else
+        {
+            EnsureUngroupedExpenseIsVisible(expense, currentUserId);
         }
 
-        var group = await GetGroupAsync(expense.GroupId, cancellationToken);
-        EnsureMembersInSplit(group, dto.Splits, currentUserId);
+        if (expense.CreatedByUserId != currentUserId)
+        {
+            throw new ExpenseNotOwnedException(id);
+        }
+
+        if (expense.GroupId is int existingGroupId)
+        {
+            var group = await GetGroupAsync(existingGroupId, cancellationToken);
+            EnsureMembersInSplit(group, dto.Splits, currentUserId);
+        }
+        else
+        {
+            await EnsureValidParticipantsAsync(dto.Splits, cancellationToken);
+        }
+
         var splits = ExpenseSplitCalculator.Calculate(dto.TotalCost, dto.SplitMode, dto.Splits);
         expense.Description = dto.Description.Trim();
         expense.TotalCost = dto.TotalCost;
@@ -92,12 +125,20 @@ public sealed class ExpenseService(IUnitOfWork unitOfWork) : IExpenseService
 
     public async Task DeleteAsync(int id, int currentUserId, CancellationToken cancellationToken = default)
     {
-        var expense = await unitOfWork.Expenses.GetByIdAsync(id, cancellationToken)
+        var expense = await unitOfWork.Expenses.GetByIdWithDetailsAsync(id, cancellationToken)
             ?? throw new EntityNotFoundException("Expense", id);
-        await EnsureMemberAsync(expense.GroupId, currentUserId, cancellationToken);
+        if (expense.GroupId is int groupId)
+        {
+            await EnsureMemberAsync(groupId, currentUserId, cancellationToken);
+        }
+        else
+        {
+            EnsureUngroupedExpenseIsVisible(expense, currentUserId);
+        }
+
         if (expense.CreatedByUserId != currentUserId)
         {
-            throw new GroupAccessDeniedException(currentUserId, expense.GroupId);
+            throw new ExpenseNotOwnedException(id);
         }
 
         unitOfWork.Expenses.Delete(expense);
@@ -117,8 +158,21 @@ public sealed class ExpenseService(IUnitOfWork unitOfWork) : IExpenseService
         }
     }
 
+    private async Task EnsureValidParticipantsAsync(IReadOnlyCollection<CreateExpenseSplitDto> splits, CancellationToken cancellationToken)
+    {
+        EnsureUniqueParticipants(splits);
+        foreach (var split in splits)
+        {
+            if (await unitOfWork.Users.GetByIdAsync(split.UserId, cancellationToken) is null)
+            {
+                throw new EntityNotFoundException("User", split.UserId);
+            }
+        }
+    }
+
     private static void EnsureMembersInSplit(Group group, IReadOnlyCollection<CreateExpenseSplitDto> splits, int currentUserId)
     {
+        EnsureUniqueParticipants(splits);
         var memberIds = group.Members.Select(member => member.UserId).ToHashSet();
         if (splits.Any(split => !memberIds.Contains(split.UserId)))
         {
@@ -126,14 +180,25 @@ public sealed class ExpenseService(IUnitOfWork unitOfWork) : IExpenseService
             throw new GroupAccessDeniedException(invalidUserId, group.Id);
         }
 
-        if (splits.Select(split => split.UserId).Distinct().Count() != splits.Count)
-        {
-            throw new EntityConflictException("An expense can contain only one split per group member.");
-        }
-
         if (!memberIds.Contains(currentUserId))
         {
             throw new GroupAccessDeniedException(currentUserId, group.Id);
+        }
+    }
+
+    private static void EnsureUniqueParticipants(IReadOnlyCollection<CreateExpenseSplitDto> splits)
+    {
+        if (splits.Select(split => split.UserId).Distinct().Count() != splits.Count)
+        {
+            throw new EntityConflictException("An expense can contain only one split per participant.");
+        }
+    }
+
+    private static void EnsureUngroupedExpenseIsVisible(Expense expense, int currentUserId)
+    {
+        if (expense.CreatedByUserId != currentUserId && expense.Splits.All(split => split.UserId != currentUserId))
+        {
+            throw new EntityNotFoundException("Expense", expense.Id);
         }
     }
 

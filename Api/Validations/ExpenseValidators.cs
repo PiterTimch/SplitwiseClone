@@ -19,7 +19,7 @@ public class CreateExpenseDtoValidator : AbstractValidator<CreateExpenseDto>
     {
         RuleFor(x => x.Description).NotEmpty().MaximumLength(500);
         RuleFor(x => x.TotalCost).GreaterThan(0).Must(value => decimal.Round(value, 2) == value);
-        RuleFor(x => x.GroupId).NotNull().GreaterThan(0);
+        RuleFor(x => x.GroupId).GreaterThan(0).When(x => x.GroupId.HasValue);
         RuleFor(x => x.Splits).NotNull().NotEmpty();
         RuleFor(x => x.SplitMode).IsInEnum();
         RuleForEach(x => x.Splits).SetValidator(new CreateExpenseSplitDtoValidator());
