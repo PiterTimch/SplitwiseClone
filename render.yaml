@@ -13,3 +13,5 @@ services:
         sync: false
       - key: JwtSettings__SecretKey
         generateValue: true
+      - key: Cors__AllowedOrigins__0
+        sync: false
