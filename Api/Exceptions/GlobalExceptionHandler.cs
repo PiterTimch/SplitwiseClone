@@ -1,49 +1,48 @@
 namespace SplitwiseClone.Api.Exceptions;
 
-using System.Text.Json;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 using SplitwiseClone.Domain.Exceptions;
 
-public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
+public sealed class GlobalExceptionHandler(
+    IProblemDetailsService problemDetailsService,
+    ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        logger.LogError(exception, "Unhandled exception occurred while processing the request, on {Path}: {Message}", httpContext.Request.Path, exception.Message);
-
-        var (statusCode, title) = exception switch
+        var (status, title) = exception switch
         {
-            ValidationException => (StatusCodes.Status400BadRequest, "Validation Error"),
-            NotFoundException => (StatusCodes.Status404NotFound, "Resource Not Found"),
-            ConflictException => (StatusCodes.Status409Conflict, "Business Conflict"),
-            Domain.Exceptions.UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized Access"),
-            _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.")
+            ValidationException => (StatusCodes.Status400BadRequest, "Validation failed"),
+            NotFoundException => (StatusCodes.Status404NotFound, "Resource not found"),
+            ConflictException => (StatusCodes.Status409Conflict, "Request conflicts with current state"),
+            Domain.Exceptions.UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
+            _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
         };
 
-        httpContext.Response.StatusCode = statusCode;
-        httpContext.Response.ContentType = "application/json";
-
-        object response;
-
-        if (exception is ValidationException validationException)
+        if (status == StatusCodes.Status500InternalServerError)
         {
-            var errors = validationException.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(e => e.ErrorMessage).ToArray());
-
-            response = new { status = statusCode, title, errors };
-        }
-        else
-        {
-            response = new { status = statusCode, title, detail = exception.Message };
+            logger.LogError(exception, "Unhandled exception processing {Path}", httpContext.Request.Path);
         }
 
-        await httpContext.Response.WriteAsync(JsonSerializer.Serialize(response, JsonOptions), cancellationToken);
+        ProblemDetails details = exception is ValidationException validationException
+            ? new HttpValidationProblemDetails(validationException.Errors
+                .GroupBy(error => error.PropertyName)
+                .ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).ToArray()))
+            : new ProblemDetails();
+        details.Status = status;
+        details.Title = title;
+        details.Detail = status == StatusCodes.Status500InternalServerError
+            ? "An internal error occurred."
+            : exception.Message;
+        details.Instance = httpContext.Request.Path;
+        httpContext.Response.StatusCode = status;
 
-        return true;
+        return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = httpContext,
+            Exception = exception,
+            ProblemDetails = details
+        });
     }
 }

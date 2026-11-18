@@ -19,7 +19,7 @@ public class ValidationFilter(IServiceProvider serviceProvider) : IAsyncActionFi
 
             if (validator is not null)
             {
-                var validationResult = validator.Validate(new ValidationContext<object>(argument));
+                var validationResult = await validator.ValidateAsync(new ValidationContext<object>(argument), context.HttpContext.RequestAborted);
 
                 if (!validationResult.IsValid)
                 {

@@ -23,6 +23,6 @@ public class AddGroupMemberDtoValidator : AbstractValidator<AddGroupMemberDto>
 {
     public AddGroupMemberDtoValidator()
     {
-        RuleFor(x => x.UserId).NotEmpty();
+        RuleFor(x => x.UserId).GreaterThan(0);
     }
 }
