@@ -2,8 +2,8 @@ namespace SplitwiseClone.Application.Interfaces.Repositories;
 
 using SplitwiseClone.Domain.Entities;
 
-public interface IUserRepository : IBaseRepository<User>
+public interface IUserRepository : IBaseRepository<ApplicationUser>
 {
-    Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
-    Task<User?> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ApplicationUser?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<ApplicationUser?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default);
 }
