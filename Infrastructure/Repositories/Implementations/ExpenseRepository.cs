@@ -24,10 +24,18 @@ public class ExpenseRepository : BaseRepository<Expense>, IExpenseRepository
     public async Task<IEnumerable<Expense>> GetByGroupIdAsync(int groupId, CancellationToken cancellationToken = default)
     {
         return await DbSet
+            .Include(e => e.Group)
             .Include(e => e.CreatedByUser)
             .Include(e => e.Splits)
                 .ThenInclude(s => s.User)
             .Where(e => e.GroupId == groupId)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Expense?> GetByIdWithSplitsAsync(int id, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(expense => expense.Splits)
+            .FirstOrDefaultAsync(expense => expense.Id == id, cancellationToken);
     }
 }
