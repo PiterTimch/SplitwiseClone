@@ -4,18 +4,17 @@ using SplitwiseClone.Application.DTOs.Users;
 using SplitwiseClone.Application.Exceptions;
 using SplitwiseClone.Application.Interfaces;
 using SplitwiseClone.Application.Interfaces.Repositories;
-using Microsoft.AspNetCore.Identity;
 using SplitwiseClone.Domain.Entities;
 
 public class UserService : IUserService
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IIdentityUserService _identityUserService;
 
-    public UserService(IUnitOfWork unitOfWork, UserManager<ApplicationUser> userManager)
+    public UserService(IUnitOfWork unitOfWork, IIdentityUserService identityUserService)
     {
         _unitOfWork = unitOfWork;
-        _userManager = userManager;
+        _identityUserService = identityUserService;
     }
 
     public async Task<UserResponseDto> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -34,10 +33,10 @@ public class UserService : IUserService
         user.LastName = dto.LastName;
         user.Email = dto.Email;
         user.UserName = dto.Email;
-        var result = await _userManager.UpdateAsync(user);
+        var result = await _identityUserService.UpdateAsync(user);
         if (!result.Succeeded)
         {
-            throw new EntityConflictException(string.Join("; ", result.Errors.Select(error => error.Description)));
+            throw new EntityConflictException(string.Join("; ", result.Errors));
         }
 
         return Map(user);
@@ -52,10 +51,10 @@ public class UserService : IUserService
             throw new EntityConflictException("A user with group or expense history cannot be deleted.");
         }
 
-        var result = await _userManager.DeleteAsync(user);
+        var result = await _identityUserService.DeleteAsync(user);
         if (!result.Succeeded)
         {
-            throw new EntityConflictException(string.Join("; ", result.Errors.Select(error => error.Description)));
+            throw new EntityConflictException(string.Join("; ", result.Errors));
         }
     }
 

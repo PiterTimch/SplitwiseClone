@@ -1,6 +1,5 @@
 namespace SplitwiseClone.Application.Services;
 
-using Microsoft.AspNetCore.Identity;
 using SplitwiseClone.Application.DTOs.Auth;
 using SplitwiseClone.Application.Exceptions;
 using SplitwiseClone.Application.Interfaces;
@@ -8,20 +7,20 @@ using SplitwiseClone.Domain.Entities;
 
 public class AuthService : IAuthService
 {
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IIdentityUserService _identityUserService;
     private readonly IJwtTokenService _jwtTokenService;
 
     public AuthService(
-        UserManager<ApplicationUser> userManager,
+        IIdentityUserService identityUserService,
         IJwtTokenService jwtTokenService)
     {
-        _userManager = userManager;
+        _identityUserService = identityUserService;
         _jwtTokenService = jwtTokenService;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto dto, CancellationToken cancellationToken = default)
     {
-        var existingUser = await _userManager.FindByEmailAsync(dto.Email);
+        var existingUser = await _identityUserService.FindByEmailAsync(dto.Email);
         if (existingUser is not null)
         {
             throw new EntityConflictException("ApplicationUser with this email already exists.");
@@ -36,35 +35,35 @@ public class AuthService : IAuthService
             CreatedAt = DateTime.UtcNow
         };
 
-        var result = await _userManager.CreateAsync(appUser, dto.Password);
+        var result = await _identityUserService.CreateAsync(appUser, dto.Password);
         if (!result.Succeeded)
         {
-            var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+            var errors = string.Join("; ", result.Errors);
             throw new EntityConflictException($"Registration failed: {errors}");
         }
 
-        var roles = await _userManager.GetRolesAsync(appUser);
-        var token = _jwtTokenService.GenerateToken(appUser, roles);
+        var roles = await _identityUserService.GetRolesAsync(appUser);
+        var token = _jwtTokenService.GenerateToken(appUser, roles.ToList());
 
         return new AuthResponseDto(token, appUser.Email!, appUser.FullName, appUser.Id);
     }
 
     public async Task<AuthResponseDto> LoginAsync(LoginRequestDto dto, CancellationToken cancellationToken = default)
     {
-        var appUser = await _userManager.FindByEmailAsync(dto.Email);
+        var appUser = await _identityUserService.FindByEmailAsync(dto.Email);
         if (appUser is null)
         {
             throw new UserUnauthorizedException("Invalid email or password.");
         }
 
-        var isPasswordValid = await _userManager.CheckPasswordAsync(appUser, dto.Password);
+        var isPasswordValid = await _identityUserService.CheckPasswordAsync(appUser, dto.Password);
         if (!isPasswordValid)
         {
             throw new UserUnauthorizedException("Invalid email or password.");
         }
 
-        var roles = await _userManager.GetRolesAsync(appUser);
-        var token = _jwtTokenService.GenerateToken(appUser, roles);
+        var roles = await _identityUserService.GetRolesAsync(appUser);
+        var token = _jwtTokenService.GenerateToken(appUser, roles.ToList());
 
         return new AuthResponseDto(token, appUser.Email!, appUser.FullName, appUser.Id);
     }

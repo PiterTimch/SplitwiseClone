@@ -7,6 +7,7 @@ using SplitwiseClone.Api.Validations;
 using SplitwiseClone.Infrastructure.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
+ValidatorOptions.Global.LanguageManager.Enabled = false;
 
 var renderPort = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrWhiteSpace(renderPort))
@@ -20,14 +21,7 @@ builder.Services.AddApplicationServices();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-builder.Services.AddScoped<IValidator<SplitwiseClone.Application.DTOs.Auth.RegisterRequestDto>, RegisterRequestDtoValidator>();
-builder.Services.AddScoped<IValidator<SplitwiseClone.Application.DTOs.Auth.LoginRequestDto>, LoginRequestDtoValidator>();
-builder.Services.AddScoped<IValidator<SplitwiseClone.Application.DTOs.Users.UpdateUserDto>, UpdateUserDtoValidator>();
-builder.Services.AddScoped<IValidator<SplitwiseClone.Application.DTOs.Groups.CreateGroupDto>, CreateGroupDtoValidator>();
-builder.Services.AddScoped<IValidator<SplitwiseClone.Application.DTOs.Groups.UpdateGroupDto>, UpdateGroupDtoValidator>();
-builder.Services.AddScoped<IValidator<SplitwiseClone.Application.DTOs.Groups.AddGroupMemberDto>, AddGroupMemberDtoValidator>();
-builder.Services.AddScoped<IValidator<SplitwiseClone.Application.DTOs.Expenses.CreateExpenseDto>, CreateExpenseDtoValidator>();
-builder.Services.AddScoped<IValidator<SplitwiseClone.Application.DTOs.Expenses.UpdateExpenseDto>, UpdateExpenseDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateGroupDtoValidator>();
 
 builder.Services.AddControllers(options =>
 {
