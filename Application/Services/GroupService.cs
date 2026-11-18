@@ -3,136 +3,112 @@ namespace SplitwiseClone.Application.Services;
 using SplitwiseClone.Application.DTOs.Groups;
 using SplitwiseClone.Application.Exceptions;
 using SplitwiseClone.Application.Interfaces;
-using SplitwiseClone.Domain.Entities;
 using SplitwiseClone.Application.Interfaces.Repositories;
+using SplitwiseClone.Domain.Entities;
 
-public class GroupService : IGroupService
+public sealed class GroupService(IUnitOfWork unitOfWork) : IGroupService
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public GroupService(IUnitOfWork unitOfWork)
+    public async Task<IEnumerable<GroupResponseDto>> GetAllAsync(int currentUserId, CancellationToken cancellationToken = default)
     {
-        _unitOfWork = unitOfWork;
+        var memberships = await unitOfWork.GroupMembers.GetByUserIdAsync(currentUserId, cancellationToken);
+        var groups = new List<Group?>();
+        foreach (var membership in memberships)
+        {
+            groups.Add(await unitOfWork.Groups.GetByIdWithDetailsAsync(membership.GroupId, cancellationToken));
+        }
+        return groups.Where(group => group is not null).Select(group => Map(group!)).ToList();
     }
 
-    public async Task<IEnumerable<GroupResponseDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<GroupResponseDto> GetByIdAsync(int id, int currentUserId, CancellationToken cancellationToken = default) =>
+        Map(await GetGroupAsync(id, currentUserId, cancellationToken));
+
+    public async Task<GroupResponseDto> CreateAsync(int currentUserId, CreateGroupDto dto, CancellationToken cancellationToken = default)
     {
-        var groups = await _unitOfWork.Groups.GetAllAsync(cancellationToken);
-        var result = new List<GroupResponseDto>();
-
-        foreach (var group in groups)
+        if (await unitOfWork.Users.GetByIdAsync(currentUserId, cancellationToken) is null)
         {
-            var members = await _unitOfWork.GroupMembers.GetByGroupIdAsync(group.Id, cancellationToken);
-            var memberDtos = members.Select(m => new GroupMemberResponseDto(
-                m.UserId,
-                m.User?.Name,
-                m.User?.Email,
-                m.JoinedAt)).ToList();
-
-            result.Add(new GroupResponseDto(group.Id, group.Name, group.CreatedAt, memberDtos));
+            throw new EntityNotFoundException("User", currentUserId);
         }
 
-        return result;
+        var group = new Group { Name = dto.Name, CreatedAt = DateTime.UtcNow };
+        group.Members.Add(new GroupMember { UserId = currentUserId, JoinedAt = DateTime.UtcNow });
+        await unitOfWork.Groups.AddAsync(group, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return Map(await unitOfWork.Groups.GetByIdWithDetailsAsync(group.Id, cancellationToken) ?? group);
     }
 
-    public async Task<GroupResponseDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(int id, int currentUserId, UpdateGroupDto dto, CancellationToken cancellationToken = default)
     {
-        var group = await _unitOfWork.Groups.GetByIdWithDetailsAsync(id, cancellationToken);
-        if (group is null)
-        {
-            return null;
-        }
-
-        var memberDtos = group.Members.Select(m => new GroupMemberResponseDto(
-            m.UserId,
-            m.User?.Name,
-            m.User?.Email,
-            m.JoinedAt)).ToList();
-
-        return new GroupResponseDto(group.Id, group.Name, group.CreatedAt, memberDtos);
-    }
-
-    public async Task<GroupResponseDto> CreateAsync(CreateGroupDto dto, CancellationToken cancellationToken = default)
-    {
-        var group = new Group
-        {
-            Name = dto.Name,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await _unitOfWork.Groups.AddAsync(group, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return new GroupResponseDto(group.Id, group.Name, group.CreatedAt, new List<GroupMemberResponseDto>());
-    }
-
-    public async Task UpdateAsync(int id, UpdateGroupDto dto, CancellationToken cancellationToken = default)
-    {
-        var group = await _unitOfWork.Groups.GetByIdAsync(id, cancellationToken);
-        if (group is null)
-        {
-            throw new EntityNotFoundException("Group", id);
-        }
-
+        var group = await GetGroupAsync(id, currentUserId, cancellationToken);
         group.Name = dto.Name;
-        _unitOfWork.Groups.Update(group);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        unitOfWork.Groups.Update(group);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(int id, int currentUserId, CancellationToken cancellationToken = default)
     {
-        var group = await _unitOfWork.Groups.GetByIdAsync(id, cancellationToken);
-        if (group is null)
+        var group = await GetGroupAsync(id, currentUserId, cancellationToken);
+        if ((await unitOfWork.Expenses.GetByGroupIdAsync(id, cancellationToken)).Any())
         {
-            throw new EntityNotFoundException("Group", id);
+            throw new EntityConflictException("A group with expense history cannot be deleted.");
         }
 
-        _unitOfWork.Groups.Delete(group);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        unitOfWork.Groups.Delete(group);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<GroupMemberResponseDto> AddMemberAsync(int groupId, AddGroupMemberDto dto, CancellationToken cancellationToken = default)
+    public async Task<GroupMemberResponseDto> AddMemberAsync(int groupId, int currentUserId, AddGroupMemberDto dto, CancellationToken cancellationToken = default)
     {
-        var group = await _unitOfWork.Groups.GetByIdAsync(groupId, cancellationToken);
-        if (group is null)
-        {
-            throw new EntityNotFoundException("Group", groupId);
-        }
-
-        var user = await _unitOfWork.Users.GetByIdAsync(dto.UserId, cancellationToken);
-        if (user is null)
-        {
-            throw new EntityNotFoundException("User", dto.UserId);
-        }
-
-        var existingMember = await _unitOfWork.GroupMembers.GetAsync(groupId, dto.UserId, cancellationToken);
-        if (existingMember is not null)
+        await GetGroupAsync(groupId, currentUserId, cancellationToken);
+        var email = dto.Email.Trim();
+        var user = await unitOfWork.Users.GetByEmailAsync(email, cancellationToken)
+            ?? throw new EntityNotFoundException("User", email);
+        if (await unitOfWork.GroupMembers.GetAsync(groupId, user.Id, cancellationToken) is not null)
         {
             throw new EntityConflictException("User is already a member of this group.");
         }
 
-        var member = new GroupMember
-        {
-            GroupId = groupId,
-            UserId = dto.UserId,
-            JoinedAt = DateTime.UtcNow
-        };
-
-        await _unitOfWork.GroupMembers.AddAsync(member, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return new GroupMemberResponseDto(member.UserId, user.Name, user.Email, member.JoinedAt);
+        var member = new GroupMember { GroupId = groupId, UserId = user.Id, User = user, JoinedAt = DateTime.UtcNow };
+        await unitOfWork.GroupMembers.AddAsync(member, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return Map(member);
     }
 
-    public async Task RemoveMemberAsync(int groupId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task RemoveMemberAsync(int groupId, int userId, int currentUserId, CancellationToken cancellationToken = default)
     {
-        var member = await _unitOfWork.GroupMembers.GetAsync(groupId, userId, cancellationToken);
-        if (member is null)
+        await GetGroupAsync(groupId, currentUserId, cancellationToken);
+        var member = await unitOfWork.GroupMembers.GetAsync(groupId, userId, cancellationToken)
+            ?? throw new EntityNotFoundException("GroupMember", $"{groupId}/{userId}");
+        var expenses = await unitOfWork.Expenses.GetByGroupIdAsync(groupId, cancellationToken);
+        if (expenses.Any(expense => expense.CreatedByUserId == userId || expense.Splits.Any(split => split.UserId == userId)))
         {
-            throw new EntityNotFoundException("GroupMember", $"{groupId}/{userId}");
+            throw new EntityConflictException("A group member with expense history cannot be removed.");
         }
 
-        _unitOfWork.GroupMembers.Delete(member);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        unitOfWork.GroupMembers.Delete(member);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
+
+    private async Task<Group> GetGroupAsync(int groupId, int currentUserId, CancellationToken cancellationToken)
+    {
+        var group = await unitOfWork.Groups.GetByIdWithDetailsAsync(groupId, cancellationToken)
+            ?? throw new EntityNotFoundException("Group", groupId);
+        if (group.Members.All(member => member.UserId != currentUserId))
+        {
+            throw new GroupAccessDeniedException(currentUserId, groupId);
+        }
+
+        return group;
+    }
+
+    private static GroupResponseDto Map(Group group) => new(
+        group.Id,
+        group.Name,
+        group.CreatedAt,
+        group.Members.Select(Map).ToList());
+
+    private static GroupMemberResponseDto Map(GroupMember member) => new(
+        member.UserId,
+        member.User?.FullName,
+        member.User?.Email,
+        member.JoinedAt);
 }

@@ -15,8 +15,6 @@ public class AuthController : ControllerBase
     {
         _authService = authService;
     }
-
-    /// <summary>Реєстрація нового користувача</summary>
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponseDto>> Register(
@@ -26,8 +24,6 @@ public class AuthController : ControllerBase
         var result = await _authService.RegisterAsync(dto, cancellationToken);
         return Ok(result);
     }
-
-    /// <summary>Вхід у систему, повертає JWT токен</summary>
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponseDto>> Login(

@@ -2,6 +2,7 @@
 **/obj/
 .git/
 .vs/
+**/appsettings.Development.json
 TestResults/
 TestReport/
 **/TestResults/

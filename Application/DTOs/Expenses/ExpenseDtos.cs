@@ -1,31 +1,42 @@
 namespace SplitwiseClone.Application.DTOs.Expenses;
 
-public record CreateExpenseSplitDto(Guid UserId, double PaidAmount, double OwedAmount);
+public enum ExpenseSplitMode
+{
+    Equal,
+    Exact,
+    Percentage,
+    Shares
+}
+
+public record CreateExpenseSplitDto(int UserId, decimal PaidShare, decimal SplitValue);
 
 public record CreateExpenseDto(
     string Description,
-    double TotalAmount,
+    decimal TotalCost,
     DateTime? Date,
     int? GroupId,
     bool IsPayment,
+    ExpenseSplitMode SplitMode,
     List<CreateExpenseSplitDto>? Splits);
 
 public record UpdateExpenseDto(
     string Description,
-    double TotalAmount,
+    decimal TotalCost,
     DateTime Date,
-    bool IsPayment);
+    bool IsPayment,
+    ExpenseSplitMode SplitMode,
+    List<CreateExpenseSplitDto> Splits);
 
-public record ExpenseSplitResponseDto(int Id, Guid UserId, string? UserName, double PaidAmount, double OwedAmount);
+public record ExpenseSplitResponseDto(int Id, int UserId, string? UserName, decimal PaidShare, decimal OwedShare);
 
 public record ExpenseResponseDto(
     int Id,
     string Description,
-    double TotalAmount,
+    decimal TotalCost,
     DateTime Date,
     int? GroupId,
     string? GroupName,
-    Guid CreatedByUserId,
+    int CreatedByUserId,
     string? CreatedByUserName,
     bool IsPayment,
     DateTime CreatedAt,

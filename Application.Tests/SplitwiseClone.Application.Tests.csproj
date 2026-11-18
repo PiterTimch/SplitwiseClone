@@ -17,5 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Application\SplitwiseClone.Application.csproj" />
+    <ProjectReference Include="..\Api\SplitwiseClone.Api.csproj" />
   </ItemGroup>
 </Project>

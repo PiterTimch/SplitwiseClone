@@ -7,7 +7,8 @@ public class UpdateUserDtoValidator : AbstractValidator<UpdateUserDto>
 {
     public UpdateUserDtoValidator()
     {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Email).NotEmpty().EmailAddress();
     }
 }

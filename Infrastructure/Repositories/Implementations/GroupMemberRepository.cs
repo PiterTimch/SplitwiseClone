@@ -11,7 +11,7 @@ public class GroupMemberRepository : BaseRepository<GroupMember>, IGroupMemberRe
     {
     }
 
-    public async Task<GroupMember?> GetAsync(int groupId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<GroupMember?> GetAsync(int groupId, int userId, CancellationToken cancellationToken = default)
     {
         return await DbSet
             .Include(gm => gm.Group)
@@ -27,7 +27,7 @@ public class GroupMemberRepository : BaseRepository<GroupMember>, IGroupMemberRe
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IEnumerable<GroupMember>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<GroupMember>> GetByUserIdAsync(int userId, CancellationToken cancellationToken = default)
     {
         return await DbSet
             .Include(gm => gm.Group)

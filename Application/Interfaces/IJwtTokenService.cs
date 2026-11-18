@@ -4,5 +4,5 @@ using Microsoft.AspNetCore.Identity;
 
 public interface IJwtTokenService
 {
-    string GenerateToken(IdentityUser<Guid> user, IList<string> roles);
+    string GenerateToken(IdentityUser<int> user, IList<string> roles);
 }

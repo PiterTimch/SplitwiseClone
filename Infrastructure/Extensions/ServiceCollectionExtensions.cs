@@ -18,6 +18,12 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        services.AddCors(options => options.AddPolicy("Frontend", policy => policy
+            .WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()));
+
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         if (!string.IsNullOrWhiteSpace(connectionString) &&
             Uri.TryCreate(connectionString, UriKind.Absolute, out var databaseUri) &&
@@ -40,9 +46,7 @@ public static class ServiceCollectionExtensions
 
         services.AddDbContext<SplitwiseDbContext>(options =>
             options.UseNpgsql(connectionString));
-
-        // ASP.NET Core Identity
-        services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
+        services.AddIdentity<ApplicationUser, IdentityRole<int>>(options =>
         {
             options.Password.RequireDigit = true;
             options.Password.RequiredLength = 8;
@@ -53,8 +57,6 @@ public static class ServiceCollectionExtensions
         })
         .AddEntityFrameworkStores<SplitwiseDbContext>()
         .AddDefaultTokenProviders();
-
-        // JWT Authentication
         var jwtSettings = configuration.GetSection("JwtSettings");
         var secretKey = jwtSettings["SecretKey"]
             ?? throw new InvalidOperationException("JWT SecretKey is not configured.");
@@ -78,8 +80,6 @@ public static class ServiceCollectionExtensions
                 ClockSkew = TimeSpan.Zero
             };
         });
-
-        // Infrastructure implementations for Application contracts
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IGroupRepository, GroupRepository>();
         services.AddScoped<IGroupMemberRepository, GroupMemberRepository>();
@@ -88,6 +88,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IIdentityUserService, IdentityUserService>();
         return services;
     }
 }
