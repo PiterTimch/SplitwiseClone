@@ -8,45 +8,20 @@ using SplitwiseClone.Application.Interfaces;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class UsersController : ControllerBase
+public sealed class UsersController(IUserService userService) : AuthenticatedControllerBase
 {
-    private readonly IUserService _userService;
+    [HttpGet("me")]
+    public async Task<ActionResult<UserResponseDto>> GetCurrentUser(CancellationToken cancellationToken) =>
+        Ok(await userService.GetByIdAsync(CurrentUserId, cancellationToken));
 
-    public UsersController(IUserService userService)
+    [HttpPut("me")]
+    public async Task<ActionResult<UserResponseDto>> UpdateCurrentUser(UpdateUserDto dto, CancellationToken cancellationToken) =>
+        Ok(await userService.UpdateAsync(CurrentUserId, dto, cancellationToken));
+
+    [HttpDelete("me")]
+    public async Task<IActionResult> DeleteCurrentUser(CancellationToken cancellationToken)
     {
-        _userService = userService;
-    }
-
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetAll(CancellationToken cancellationToken)
-    {
-        var result = await _userService.GetAllAsync(cancellationToken);
-        return Ok(result);
-    }
-
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<UserResponseDto>> GetById(Guid id, CancellationToken cancellationToken)
-    {
-        var result = await _userService.GetByIdAsync(id, cancellationToken);
-        if (result is null)
-        {
-            return NotFound();
-        }
-
-        return Ok(result);
-    }
-
-    [HttpPut("{id:guid}")]
-    public async Task<ActionResult<UserResponseDto>> Update(Guid id, [FromBody] UpdateUserDto dto, CancellationToken cancellationToken)
-    {
-        var result = await _userService.UpdateAsync(id, dto, cancellationToken);
-        return Ok(result);
-    }
-
-    [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
-    {
-        await _userService.DeleteAsync(id, cancellationToken);
+        await userService.DeleteAsync(CurrentUserId, cancellationToken);
         return NoContent();
     }
 }

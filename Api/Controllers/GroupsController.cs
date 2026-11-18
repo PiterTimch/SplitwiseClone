@@ -8,52 +8,44 @@ using SplitwiseClone.Application.Interfaces;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class GroupsController : ControllerBase
+public class GroupsController(IGroupService groupService, IBalanceService balanceService) : AuthenticatedControllerBase
 {
-    private readonly IGroupService _groupService;
-
-    public GroupsController(IGroupService groupService)
-    {
-        _groupService = groupService;
-    }
-
     [HttpGet]
     public async Task<ActionResult<IEnumerable<GroupResponseDto>>> GetAll(CancellationToken cancellationToken)
     {
-        var result = await _groupService.GetAllAsync(cancellationToken);
-        return Ok(result);
+        return Ok(await groupService.GetAllAsync(CurrentUserId, cancellationToken));
     }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<GroupResponseDto>> GetById(int id, CancellationToken cancellationToken)
     {
-        var result = await _groupService.GetByIdAsync(id, cancellationToken);
-        if (result is null)
-        {
-            return NotFound();
-        }
+        return Ok(await groupService.GetByIdAsync(id, CurrentUserId, cancellationToken));
+    }
 
-        return Ok(result);
+    [HttpGet("{id:int}/balances")]
+    public async Task<ActionResult<GroupBalancesDto>> GetBalances(int id, CancellationToken cancellationToken)
+    {
+        return Ok(await balanceService.GetGroupBalancesAsync(id, CurrentUserId, cancellationToken));
     }
 
     [HttpPost]
     public async Task<ActionResult<GroupResponseDto>> Create([FromBody] CreateGroupDto dto, CancellationToken cancellationToken)
     {
-        var result = await _groupService.CreateAsync(dto, cancellationToken);
+        var result = await groupService.CreateAsync(CurrentUserId, dto, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateGroupDto dto, CancellationToken cancellationToken)
     {
-        await _groupService.UpdateAsync(id, dto, cancellationToken);
+        await groupService.UpdateAsync(id, CurrentUserId, dto, cancellationToken);
         return NoContent();
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        await _groupService.DeleteAsync(id, cancellationToken);
+        await groupService.DeleteAsync(id, CurrentUserId, cancellationToken);
         return NoContent();
     }
 
@@ -63,14 +55,14 @@ public class GroupsController : ControllerBase
         [FromBody] AddGroupMemberDto dto,
         CancellationToken cancellationToken)
     {
-        var result = await _groupService.AddMemberAsync(id, dto, cancellationToken);
+        var result = await groupService.AddMemberAsync(id, CurrentUserId, dto, cancellationToken);
         return Ok(result);
     }
 
-    [HttpDelete("{id:int}/members/{userId:guid}")]
-    public async Task<IActionResult> RemoveMember(int id, Guid userId, CancellationToken cancellationToken)
+    [HttpDelete("{id:int}/members/{userId:int}")]
+    public async Task<IActionResult> RemoveMember(int id, int userId, CancellationToken cancellationToken)
     {
-        await _groupService.RemoveMemberAsync(id, userId, cancellationToken);
+        await groupService.RemoveMemberAsync(id, userId, CurrentUserId, cancellationToken);
         return NoContent();
     }
 }
