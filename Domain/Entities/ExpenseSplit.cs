@@ -7,8 +7,8 @@ public class ExpenseSplit : IEntity<int>
     public int Id { get; set; }
     public int ExpenseId { get; set; }
     public Expense? Expense { get; set; }
-    public Guid UserId { get; set; }
-    public User? User { get; set; }
-    public double PaidAmount { get; set; }
-    public double OwedAmount { get; set; }
+    public int UserId { get; set; }
+    public ApplicationUser? User { get; set; }
+    public decimal PaidShare { get; set; }
+    public decimal OwedShare { get; set; }
 }
