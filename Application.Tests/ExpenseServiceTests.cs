@@ -11,6 +11,14 @@ namespace SplitwiseClone.Application.Tests;
 public sealed class ExpenseServiceTests
 {
     [Fact]
+    public void GetSplitModes_ReturnsEverySupportedMode()
+    {
+        var fixture = new Fixture();
+
+        Assert.Equal(Enum.GetValues<ExpenseSplitMode>(), fixture.Service.GetSplitModes());
+    }
+
+    [Fact]
     public async Task CreateAsync_RejectsNonMemberSplit()
     {
         var fixture = new Fixture();

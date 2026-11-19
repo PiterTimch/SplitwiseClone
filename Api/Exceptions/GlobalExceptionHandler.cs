@@ -1,5 +1,6 @@
 namespace SplitwiseClone.Api.Exceptions;
 
+using System.Diagnostics;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -38,11 +39,25 @@ public sealed class GlobalExceptionHandler(
         details.Instance = httpContext.Request.Path;
         httpContext.Response.StatusCode = status;
 
-        return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+        var problemDetailsContext = new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
             ProblemDetails = details
-        });
+        };
+
+        if (await problemDetailsService.TryWriteAsync(problemDetailsContext))
+        {
+            return true;
+        }
+
+        details.Extensions["traceId"] = Activity.Current?.Id ?? httpContext.TraceIdentifier;
+        httpContext.Response.ContentType = "application/problem+json";
+        await httpContext.Response.WriteAsJsonAsync(
+            details,
+            options: null,
+            contentType: "application/problem+json",
+            cancellationToken: cancellationToken);
+        return true;
     }
 }
