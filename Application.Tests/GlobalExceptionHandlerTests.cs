@@ -34,6 +34,17 @@ public sealed class GlobalExceptionHandlerTests
     }
 
     [Fact]
+    public async Task UnauthorizedFailure_WithUnsupportedAccept_StillReturnsProblemDetails()
+    {
+        var result = await Invoke(new UserUnauthorizedException("Invalid email or password."), "/api/auth/login", "text/plain");
+
+        Assert.Equal(StatusCodes.Status401Unauthorized, result.StatusCode);
+        Assert.StartsWith("application/problem+json", result.ContentType);
+        using var json = JsonDocument.Parse(result.Body);
+        Assert.Equal("Invalid email or password.", json.RootElement.GetProperty("detail").GetString());
+    }
+
+    [Fact]
     public async Task UnexpectedFailure_DoesNotExposeExceptionMessage()
     {
         var result = await Invoke(new InvalidOperationException("database password leaked"), "/api/groups");
@@ -43,7 +54,10 @@ public sealed class GlobalExceptionHandlerTests
         Assert.Contains("internal error", result.Body, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static async Task<(int StatusCode, string? ContentType, string Body)> Invoke(Exception exception, string path)
+    private static async Task<(int StatusCode, string? ContentType, string Body)> Invoke(
+        Exception exception,
+        string path,
+        string? accept = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -51,6 +65,10 @@ public sealed class GlobalExceptionHandlerTests
         await using var provider = services.BuildServiceProvider();
         var context = new DefaultHttpContext { RequestServices = provider };
         context.Request.Path = path;
+        if (accept is not null)
+        {
+            context.Request.Headers.Accept = accept;
+        }
         context.Response.Body = new MemoryStream();
         var handler = new GlobalExceptionHandler(provider.GetRequiredService<IProblemDetailsService>(),
             provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<GlobalExceptionHandler>>());
