@@ -1,6 +1,7 @@
 namespace SplitwiseClone.Api.Filters;
 
 using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 public class ValidationFilter(IServiceProvider serviceProvider) : IAsyncActionFilter
@@ -23,7 +24,24 @@ public class ValidationFilter(IServiceProvider serviceProvider) : IAsyncActionFi
 
                 if (!validationResult.IsValid)
                 {
-                    throw new ValidationException(validationResult.Errors);
+                    var errors = validationResult.Errors
+                        .GroupBy(error => error.PropertyName)
+                        .ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).ToArray());
+                    var details = new HttpValidationProblemDetails(errors)
+                    {
+                        Status = StatusCodes.Status400BadRequest,
+                        Title = "Validation failed",
+                        Detail = "One or more validation errors occurred.",
+                        Instance = context.HttpContext.Request.Path
+                    };
+
+                    context.Result = new ObjectResult(details)
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        ContentTypes = { "application/problem+json" }
+                    };
+
+                    return;
                 }
             }
         }
