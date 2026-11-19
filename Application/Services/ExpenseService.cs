@@ -8,6 +8,8 @@ using SplitwiseClone.Domain.Entities;
 
 public sealed class ExpenseService(IUnitOfWork unitOfWork) : IExpenseService
 {
+    public IReadOnlyCollection<ExpenseSplitMode> GetSplitModes() => Enum.GetValues<ExpenseSplitMode>();
+
     public async Task<IEnumerable<ExpenseResponseDto>> GetAllAsync(int currentUserId, CancellationToken cancellationToken = default)
     {
         var memberships = await unitOfWork.GroupMembers.GetByUserIdAsync(currentUserId, cancellationToken);

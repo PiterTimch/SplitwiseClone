@@ -10,6 +10,12 @@ using SplitwiseClone.Application.Interfaces;
 [Authorize]
 public class ExpensesController(IExpenseService expenseService) : AuthenticatedControllerBase
 {
+    [HttpGet("split-modes")]
+    public ActionResult<IEnumerable<ExpenseSplitMode>> GetSplitModes()
+    {
+        return Ok(expenseService.GetSplitModes());
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ExpenseResponseDto>>> GetAll(CancellationToken cancellationToken)
     {

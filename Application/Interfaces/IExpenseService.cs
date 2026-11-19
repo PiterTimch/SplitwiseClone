@@ -4,6 +4,7 @@ using SplitwiseClone.Application.DTOs.Expenses;
 
 public interface IExpenseService
 {
+    IReadOnlyCollection<ExpenseSplitMode> GetSplitModes();
     Task<IEnumerable<ExpenseResponseDto>> GetAllAsync(int currentUserId, CancellationToken cancellationToken = default);
     Task<ExpenseResponseDto> GetByIdAsync(int id, int currentUserId, CancellationToken cancellationToken = default);
     Task<IEnumerable<ExpenseResponseDto>> GetByGroupAsync(int groupId, int currentUserId, CancellationToken cancellationToken = default);
