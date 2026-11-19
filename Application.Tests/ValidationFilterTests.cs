@@ -38,6 +38,8 @@ public sealed class ValidationFilterTests
         var details = Assert.IsType<HttpValidationProblemDetails>(result.Value);
         Assert.Equal(StatusCodes.Status400BadRequest, details.Status);
         Assert.Contains("Password", details.Errors.Keys);
+        var passwordErrors = Assert.Single(details.Errors, error => error.Key == "Password").Value;
+        Assert.Equal("Password must be at least 8 characters.", Assert.Single(passwordErrors));
         Assert.Equal("Validation failed", details.Title);
     }
 
