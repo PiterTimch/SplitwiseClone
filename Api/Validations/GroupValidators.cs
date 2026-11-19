@@ -10,6 +10,7 @@ public class CreateGroupDtoValidator : AbstractValidator<CreateGroupDto>
     public CreateGroupDtoValidator()
     {
         RuleFor(x => x.Name)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty()
             .Length(3, 100)
             .Must(name => !ReservedNames.Contains(name, StringComparer.OrdinalIgnoreCase))
@@ -24,6 +25,7 @@ public class UpdateGroupDtoValidator : AbstractValidator<UpdateGroupDto>
     public UpdateGroupDtoValidator()
     {
         RuleFor(x => x.Name)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty()
             .Length(3, 100)
             .Must(name => !ReservedNames.Contains(name, StringComparer.OrdinalIgnoreCase))
@@ -35,7 +37,7 @@ public class AddGroupMemberDtoValidator : AbstractValidator<AddGroupMemberDto>
 {
     public AddGroupMemberDtoValidator()
     {
-        RuleFor(x => x.Email).NotEmpty().EmailAddress()
+        RuleFor(x => x.Email).Cascade(CascadeMode.Stop).NotEmpty().EmailAddress()
             .WithMessage("A valid email address is required.");
     }
 }
