@@ -34,6 +34,15 @@ public sealed class GlobalExceptionHandlerTests
     }
 
     [Fact]
+    public async Task ConflictFailure_Returns409ProblemDetails()
+    {
+        var result = await Invoke(new EntityConflictException("Expense shares do not match the total."), "/api/expenses");
+
+        Assert.Equal(StatusCodes.Status409Conflict, result.StatusCode);
+        Assert.StartsWith("application/problem+json", result.ContentType);
+    }
+
+    [Fact]
     public async Task UnauthorizedFailure_WithUnsupportedAccept_StillReturnsProblemDetails()
     {
         var result = await Invoke(new UserUnauthorizedException("Invalid email or password."), "/api/auth/login", "text/plain");
